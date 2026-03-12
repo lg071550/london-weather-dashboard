@@ -1,0 +1,14 @@
+wunderground_api_key: ""
+metar_stations:
+  - EGLC
+  - EGLL
+  - EGKB
+  - EGWU
+refresh_intervals_seconds:
+  nwp: 300
+  metar: 60
+  wunderground: 180
+  hourly: 300
+london:
+  lat: 51.5074
+  lon: -0.1278
