@@ -33,10 +33,14 @@ namespace {
     };
 
     const std::vector<TuiTheme> THEMES = {
-        {Color::RGB(136, 192, 208), Color::RGB(129, 161, 193), Color::RGB(163, 190, 140), Color::RGB(163, 190, 140), Color::RGB(236, 239, 244), Color::RGB(241, 250, 140), Color::RGB(255, 85, 85), Color::RGB(76, 86, 106), Color::RGB(46, 52, 64), Color::RGB(59, 66, 82), Color::RGB(67, 76, 94)},
-        {Color::RGB(98, 114, 164), Color::RGB(139, 233, 253), Color::RGB(189, 147, 249), Color::RGB(80, 250, 123), Color::RGB(248, 248, 242), Color::RGB(241, 250, 140), Color::RGB(255, 85, 85), Color::RGB(98, 114, 164), Color::RGB(40, 42, 54), Color::RGB(68, 71, 90), Color::RGB(68, 71, 90)},
-        {Color::RGB(211, 134, 155), Color::RGB(131, 165, 152), Color::RGB(250, 189, 47), Color::RGB(184, 187, 38), Color::RGB(235, 219, 178), Color::RGB(250, 189, 47), Color::RGB(204, 36, 29), Color::RGB(146, 131, 116), Color::RGB(40, 40, 40), Color::RGB(50, 48, 47), Color::RGB(80, 73, 69)},
-        {Color::RGB(94, 129, 172), Color::RGB(143, 188, 187), Color::RGB(180, 142, 173), Color::RGB(163, 190, 140), Color::RGB(242, 244, 248), Color::RGB(235, 203, 139), Color::RGB(191, 97, 106), Color::RGB(129, 161, 193), Color::RGB(36, 41, 51), Color::RGB(47, 54, 64), Color::RGB(59, 66, 82)}
+        // Nord
+        {Color::RGB(136, 192, 208), Color::RGB(129, 161, 193), Color::RGB(180, 142, 173), Color::RGB(236, 239, 244), Color::RGB(163, 190, 140), Color::RGB(235, 203, 139), Color::RGB(191, 97, 106), Color::RGB(129, 161, 193), Color::RGB(46, 52, 64), Color::RGB(59, 66, 82), Color::RGB(67, 76, 94)},
+        // Dracula
+        {Color::RGB(139, 233, 253), Color::RGB(80, 250, 123), Color::RGB(189, 147, 249), Color::RGB(248, 248, 242), Color::RGB(80, 250, 123), Color::RGB(241, 250, 140), Color::RGB(255, 85, 85), Color::RGB(98, 114, 164), Color::RGB(40, 42, 54), Color::RGB(68, 71, 90), Color::RGB(68, 71, 90)},
+        // Gruvbox
+        {Color::RGB(250, 189, 47), Color::RGB(131, 165, 152), Color::RGB(211, 134, 155), Color::RGB(235, 219, 178), Color::RGB(184, 187, 38), Color::RGB(250, 189, 47), Color::RGB(204, 36, 29), Color::RGB(146, 131, 116), Color::RGB(40, 40, 40), Color::RGB(50, 48, 47), Color::RGB(80, 73, 69)},
+        // Slate
+        {Color::RGB(143, 188, 187), Color::RGB(94, 129, 172), Color::RGB(180, 142, 173), Color::RGB(242, 244, 248), Color::RGB(163, 190, 140), Color::RGB(235, 203, 139), Color::RGB(191, 97, 106), Color::RGB(129, 161, 193), Color::RGB(36, 41, 51), Color::RGB(47, 54, 64), Color::RGB(59, 66, 82)}
     };
 
     const std::vector<std::string> THEME_NAMES = {"Nord", "Dracula", "Gruvbox", "Slate"};
@@ -146,22 +150,28 @@ void TuiRenderer::run() {
 ftxui::Element TuiRenderer::render() {
     const auto& theme = currentTheme(theme_index_);
 
-    return vbox({
+    auto content = vbox({
         renderHeader(),
         renderNwpPanel() | flex_shrink,
         renderMetarPanel() | flex_shrink,
         hbox({
-            renderHourlyPanel() | flex,
+            hbox({
+                filler(),
+                renderHourlyPanel() | flex_shrink,
+                filler(),
+            }) | flex,
             separator() | color(theme.muted),
             vbox({
                 renderEdgePanel() | flex_shrink,
                 renderTmaxConsensus() | flex_shrink,
                 renderAviationAlertsPanel() | flex,
-            }) | size(WIDTH, GREATER_THAN, 42) | flex_shrink,
+            }) | size(WIDTH, GREATER_THAN, 54) | flex_shrink,
         }) | flex,
         renderStatusBar(),
         renderKeyHints(),
     });
+
+    return content;
 }
 
 ftxui::Element TuiRenderer::renderHeader() {
@@ -173,7 +183,7 @@ ftxui::Element TuiRenderer::renderHeader() {
         text("EGLC") | bold | color(theme.secondary),
         text(" | ") | color(theme.muted),
         filler(),
-        text(utc) | bold | color(Color::White),
+        text(utc) | bold | color(theme.text),
     }) | bgcolor(theme.header_bg) | bold;
 }
 
@@ -498,6 +508,8 @@ ftxui::Element TuiRenderer::renderHourlyPanel() {
     int day1_end = std::min(static_cast<int>(hours.size()), day1_start + day_block);
     int day2_start = day1_end;
     int day2_end = std::min(static_cast<int>(hours.size()), day2_start + day_block);
+    int day3_start = day2_end;
+    int day3_end = std::min(static_cast<int>(hours.size()), day3_start + day_block);
 
     auto build_table = [&](int from, int to) -> Element {
         std::vector<std::vector<std::string>> rows;
@@ -532,16 +544,27 @@ ftxui::Element TuiRenderer::renderHourlyPanel() {
             now_row.Decorate(bold | color(theme.primary));
         }
 
-        return table.Render() | flex;
+        return table.Render() | flex_shrink;
     };
 
-    Element left = build_table(day1_start, day1_end);
-    Element right = day2_start < day2_end
+    Element day1 = build_table(day1_start, day1_end);
+    Element day2 = day2_start < day2_end
         ? build_table(day2_start, day2_end)
-        : text("No next-day hours") | color(theme.muted) | flex;
+        : text("No day-2 hours") | color(theme.muted) | flex_shrink;
+    Element day3 = day3_start < day3_end
+        ? build_table(day3_start, day3_end)
+        : text("No day-3 hours") | color(theme.muted) | flex_shrink;
 
-    return window(text(" HOURLY TIMELINE (2 DAYS) ") | bold | color(theme.title),
-                  hbox({left, separator() | color(theme.muted), right}) | flex);
+    auto trio = hbox({
+        day1,
+        separator() | color(theme.muted),
+        day2,
+        separator() | color(theme.muted),
+        day3
+    }) | flex_shrink;
+
+    return window(text(" HOURLY TIMELINE (3 DAYS) ") | bold | color(theme.title),
+                  hbox({filler(), trio, filler()}) | flex);
 }
 
 ftxui::Element TuiRenderer::renderTmaxConsensus() {
@@ -562,11 +585,10 @@ ftxui::Element TuiRenderer::renderTmaxConsensus() {
         const auto& e = ensemble[i];
         std::string line = e.date + "  " +
             utils::formatFloat(e.weighted_tmax, 1) + "\xC2\xB0" "C \xC2\xB1 " +
-            utils::formatFloat(e.sigma, 1) + "\xC2\xB0" "C  [" +
-            std::to_string(e.model_count) + " models]";
+            utils::formatFloat(e.sigma, 1) + "\xC2\xB0" "C";
 
         if (i == 0 && has_day_high) {
-            line += "  " + primary_station + " high so far: " + utils::formatFloat(observed_high, 1) + "\xC2\xB0" "C";
+            line += " " + primary_station + " high so far: " + utils::formatFloat(observed_high, 1) + "\xC2\xB0" "C";
         }
 
         auto el = text(line);
@@ -607,7 +629,7 @@ ftxui::Element TuiRenderer::renderStatusBar() {
         } else if (refresh.empty()) {
             parts.push_back(text(name + ": --") | color(theme.muted));
         } else {
-            parts.push_back(text(name + ": " + formatRefreshAge(refresh) + suffix) | color(Color::GrayLight));
+            parts.push_back(text(name + ": " + formatRefreshAge(refresh) + suffix) | color(theme.text));
         }
     };
 
@@ -626,14 +648,14 @@ ftxui::Element TuiRenderer::renderKeyHints() {
     const auto& theme = currentTheme(theme_index_);
     std::string name = THEME_NAMES[theme_index_ % static_cast<int>(THEME_NAMES.size())];
     return hbox({
-        text("[q]") | bold | color(Color::White),
-        text(" quit  ") | color(Color::GrayLight),
-        text("[\xE2\x86\x91\xE2\x86\x93]") | bold | color(Color::White),
-        text(" scroll METAR  ") | color(Color::GrayLight),
-        text("[r]") | bold | color(Color::White),
-        text(" refresh  ") | color(Color::GrayLight),
-        text("[t]") | bold | color(Color::White),
-        text(" theme: ") | color(Color::GrayLight),
+        text("[q]") | bold | color(theme.text),
+        text(" quit  ") | color(theme.muted),
+        text("[\xE2\x86\x91\xE2\x86\x93]") | bold | color(theme.text),
+        text(" scroll METAR  ") | color(theme.muted),
+        text("[r]") | bold | color(theme.text),
+        text(" refresh  ") | color(theme.muted),
+        text("[t]") | bold | color(theme.text),
+        text(" theme: ") | color(theme.muted),
         text(name) | bold | color(theme.primary),
     }) | bgcolor(theme.hints_bg);
 }

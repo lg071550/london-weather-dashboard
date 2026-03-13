@@ -12,7 +12,7 @@ std::vector<HourlyObs> OpenMeteoHourlyFetcher::fetch(HttpClient& http,
         "latitude=%.4f&longitude=%.4f"
         "&hourly=temperature_2m,precipitation,windspeed_10m,cloudcover"
         "&timezone=Europe%%2FLondon"
-        "&forecast_days=2",
+        "&forecast_days=3",
         lat, lon);
 
     spdlog::debug("OpenMeteoHourlyFetcher GET {}", url);
