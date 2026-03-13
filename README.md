@@ -9,4 +9,4 @@ A brief list of displayed data:
 - NWP model forecasts & ensemble forecast from the following four models; GFS, ECMWF, ICON and UKV (obtained via open-meteo)
 - EGLC specific data table displaying latest report, observed high so far and a "signal" signifying current relation to our forecasted high (e.g neutral bias, upside bias or if we have already exceeded our forecasted ensemble high)
 
-![TUI Image](example.png)
+![ui showcase](example.png)
