@@ -561,9 +561,9 @@ ftxui::Element TuiRenderer::renderTmaxConsensus() {
             utils::formatFloat(e.sigma, 1) + "\xC2\xB0" "C  [" +
             std::to_string(e.model_count) + " models]";
 
-        if (e.has_previous) {
-            line += "  " + formatDelta(e.delta_from_previous);
-        }
+        //if (e.has_previous) {
+        //    line += "  " + formatDelta(e.delta_from_previous);
+        //}
 
         if (i == 0 && has_day_high) {
             line += "  " + primary_station + " high so far: " + utils::formatFloat(observed_high, 1) + "\xC2\xB0" "C";
