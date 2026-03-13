@@ -6,8 +6,8 @@
 
 namespace {
     struct ModelDef {
-        std::string label;   
-        std::string slug;    
+        std::string label;
+        std::string slug;
     };
 
     const std::vector<ModelDef> MODELS = {
@@ -29,7 +29,7 @@ std::vector<NwpModelForecast> NwpFetcher::fetch(HttpClient& http, double lat, do
                 "latitude=%.4f&longitude=%.4f"
                 "&daily=temperature_2m_max,temperature_2m_min"
                 "&timezone=Europe%%2FLondon"
-                "&forecast_days=3"
+                "&forecast_days=5"
                 "&models=%s",
                 lat, lon, model.slug.c_str());
 
@@ -40,7 +40,6 @@ std::vector<NwpModelForecast> NwpFetcher::fetch(HttpClient& http, double lat, do
             NwpModelForecast forecast;
             forecast.model = model.label;
 
-            
             if (json.contains("generationtime_ms")) {
                 forecast.run_time = utils::currentUtcTimeString();
             }
@@ -62,7 +61,7 @@ std::vector<NwpModelForecast> NwpFetcher::fetch(HttpClient& http, double lat, do
                 }
             }
 
-            forecast.age_minutes = 0; 
+            forecast.age_minutes = 0;
             if (!forecast.tmax_by_date.empty()) {
                 results.push_back(std::move(forecast));
                 spdlog::info("NwpFetcher: {} returned {} days", model.label,

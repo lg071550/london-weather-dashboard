@@ -33,7 +33,7 @@ namespace {
     };
 
     const std::vector<TuiTheme> THEMES = {
-        {Color::RGB(136, 192, 208), Color::RGB(129, 161, 193), Color::RGB(163, 190, 140), Color::RGB(163, 190, 140), Color::RGB(236, 239, 244), Color::RGB(235, 203, 139), Color::RGB(191, 97, 106), Color::RGB(76, 86, 106), Color::RGB(46, 52, 64), Color::RGB(59, 66, 82), Color::RGB(67, 76, 94)},
+        {Color::RGB(136, 192, 208), Color::RGB(129, 161, 193), Color::RGB(163, 190, 140), Color::RGB(163, 190, 140), Color::RGB(236, 239, 244), Color::RGB(241, 250, 140), Color::RGB(255, 85, 85), Color::RGB(76, 86, 106), Color::RGB(46, 52, 64), Color::RGB(59, 66, 82), Color::RGB(67, 76, 94)},
         {Color::RGB(98, 114, 164), Color::RGB(139, 233, 253), Color::RGB(189, 147, 249), Color::RGB(80, 250, 123), Color::RGB(248, 248, 242), Color::RGB(241, 250, 140), Color::RGB(255, 85, 85), Color::RGB(98, 114, 164), Color::RGB(40, 42, 54), Color::RGB(68, 71, 90), Color::RGB(68, 71, 90)},
         {Color::RGB(211, 134, 155), Color::RGB(131, 165, 152), Color::RGB(250, 189, 47), Color::RGB(184, 187, 38), Color::RGB(235, 219, 178), Color::RGB(250, 189, 47), Color::RGB(204, 36, 29), Color::RGB(146, 131, 116), Color::RGB(40, 40, 40), Color::RGB(50, 48, 47), Color::RGB(80, 73, 69)},
         {Color::RGB(94, 129, 172), Color::RGB(143, 188, 187), Color::RGB(180, 142, 173), Color::RGB(163, 190, 140), Color::RGB(242, 244, 248), Color::RGB(235, 203, 139), Color::RGB(191, 97, 106), Color::RGB(129, 161, 193), Color::RGB(36, 41, 51), Color::RGB(47, 54, 64), Color::RGB(59, 66, 82)}
@@ -190,7 +190,7 @@ ftxui::Element TuiRenderer::renderNwpPanel() {
     std::vector<std::string> dates;
     for (const auto& e : ensemble) {
         dates.push_back(e.date);
-        if (dates.size() >= 3) break;
+        if (dates.size() >= 5) break;
     }
 
     std::vector<std::string> header = {"Model"};
@@ -485,9 +485,6 @@ ftxui::Element TuiRenderer::renderHourlyPanel() {
 
     std::string current_hour = utils::currentUtcHourString();
 
-    std::vector<std::vector<std::string>> rows;
-    rows.push_back({"Hour(UTC)", "Temp\xC2\xB0" "C", "Precip mm", "Wind km/h", "Cloud%", "Notes"});
-
     int current_idx = -1;
     for (size_t i = 0; i < hours.size(); ++i) {
         if (hours[i].hour_utc == current_hour) {
@@ -496,48 +493,55 @@ ftxui::Element TuiRenderer::renderHourlyPanel() {
         }
     }
 
-    constexpr int max_visible = 24;
-    int range_start = 0;
-    if (current_idx >= 0) {
-        int max_start = std::max(0, static_cast<int>(hours.size()) - max_visible);
-        range_start = std::clamp(current_idx - 12, 0, max_start);
-    }
-    int range_end = std::min(static_cast<int>(hours.size()), range_start + max_visible);
+    constexpr int day_block = 24;
+    int day1_start = 0;
+    int day1_end = std::min(static_cast<int>(hours.size()), day1_start + day_block);
+    int day2_start = day1_end;
+    int day2_end = std::min(static_cast<int>(hours.size()), day2_start + day_block);
 
-    for (int i = range_start; i < range_end; ++i) {
-        const auto& h = hours[i];
-        std::string notes;
-        if (h.hour_utc == current_hour) {
-            notes = "NOW";
+    auto build_table = [&](int from, int to) -> Element {
+        std::vector<std::vector<std::string>> rows;
+        rows.push_back({"Hour(UTC)", "Temp\xC2\xB0" "C", "Precip mm", "Wind km/h", "Cloud%", "Notes"});
+
+        for (int i = from; i < to; ++i) {
+            const auto& h = hours[i];
+            std::string notes;
+            if (i == current_idx) {
+                notes = "NOW";
+            }
+
+            rows.push_back({
+                h.hour_utc,
+                utils::formatFloat(h.temp_c, 1),
+                utils::formatFloat(h.precip_mm, 1),
+                utils::formatFloat(h.wind_kmh, 0),
+                std::to_string(h.cloud_pct),
+                notes
+            });
         }
 
-        rows.push_back({
-            h.hour_utc,
-            utils::formatFloat(h.temp_c, 1),
-            utils::formatFloat(h.precip_mm, 1),
-            utils::formatFloat(h.wind_kmh, 0),
-            std::to_string(h.cloud_pct),
-            notes
-        });
-    }
+        auto table = Table(rows);
+        auto all = table.SelectAll();
+        all.Border(LIGHT);
+        auto header = table.SelectRow(0);
+        header.Decorate(bold);
+        header.SeparatorVertical(LIGHT);
 
-    auto table = Table(rows);
-    auto all_hourly = table.SelectAll();
-    all_hourly.Border(LIGHT);
-    auto hourly_header = table.SelectRow(0);
-    hourly_header.Decorate(bold);
-    hourly_header.SeparatorVertical(LIGHT);
-
-    if (current_idx >= 0) {
-        int table_row = current_idx - range_start + 1;
-        if (table_row > 0 && table_row < static_cast<int>(rows.size())) {
-            auto hourly_row = table.SelectRow(table_row);
-            hourly_row.Decorate(bold | color(theme.primary));
+        if (current_idx >= from && current_idx < to) {
+            auto now_row = table.SelectRow(current_idx - from + 1);
+            now_row.Decorate(bold | color(theme.primary));
         }
-    }
 
-    return window(text(" HOURLY TIMELINE ") | bold | color(theme.title),
-                  table.Render());
+        return table.Render() | flex;
+    };
+
+    Element left = build_table(day1_start, day1_end);
+    Element right = day2_start < day2_end
+        ? build_table(day2_start, day2_end)
+        : text("No next-day hours") | color(theme.muted) | flex;
+
+    return window(text(" HOURLY TIMELINE (2 DAYS) ") | bold | color(theme.title),
+                  hbox({left, separator() | color(theme.muted), right}) | flex);
 }
 
 ftxui::Element TuiRenderer::renderTmaxConsensus() {
@@ -554,16 +558,12 @@ ftxui::Element TuiRenderer::renderTmaxConsensus() {
 
     std::vector<Element> lines;
 
-    for (size_t i = 0; i < ensemble.size() && i < 3; ++i) {
+    for (size_t i = 0; i < ensemble.size() && i < 5; ++i) {
         const auto& e = ensemble[i];
         std::string line = e.date + "  " +
             utils::formatFloat(e.weighted_tmax, 1) + "\xC2\xB0" "C \xC2\xB1 " +
             utils::formatFloat(e.sigma, 1) + "\xC2\xB0" "C  [" +
             std::to_string(e.model_count) + " models]";
-
-        //if (e.has_previous) {
-        //    line += "  " + formatDelta(e.delta_from_previous);
-        //}
 
         if (i == 0 && has_day_high) {
             line += "  " + primary_station + " high so far: " + utils::formatFloat(observed_high, 1) + "\xC2\xB0" "C";
@@ -579,7 +579,7 @@ ftxui::Element TuiRenderer::renderTmaxConsensus() {
     }
 
     return window(text(" TMAX CONSENSUS ") | bold | color(theme.title),
-                  vbox(lines) | size(HEIGHT, EQUAL, 3));
+                  vbox(lines) | size(HEIGHT, EQUAL, static_cast<int>(lines.size())));
 }
 
 ftxui::Element TuiRenderer::renderStatusBar() {
