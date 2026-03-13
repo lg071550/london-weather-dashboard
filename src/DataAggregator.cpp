@@ -32,7 +32,7 @@ namespace {
 DataAggregator::DataAggregator(std::shared_ptr<Config> config)
     : config_(std::move(config)) {
     auto stations = config_->metarStations();
-    primary_station_id_ = stations.empty() ? "EGLC" : stations.front();
+    primary_station_id_ = "EGLC"; // london resolution always uses EGLC metar  //stations.empty() ? "EGLC" : stations.front(); 
 }
 
 DataAggregator::~DataAggregator() {
